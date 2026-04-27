@@ -55,12 +55,8 @@ export default function App() {
     <div className="app-layout">
       <nav className="nav">
         <div className="container nav-inner">
-          <button
-            className="nav-brand"
-            onClick={() => setView({ page: 'dashboard' })}
-            style={{ background: 'none', border: 'none' }}
-          >
-            GPA <span>Tracker</span>
+          <button className="nav-brand" onClick={() => setView({ page: 'dashboard' })}>
+            GPA <em>Tracker</em>
           </button>
           <div className="nav-actions">
             <button

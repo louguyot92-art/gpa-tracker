@@ -183,10 +183,11 @@ export function CourseDetail({ course, t, lang, userId, onBack }: Props) {
 
   return (
     <>
-      <div className="page">
+      <div className="page page-enter">
         <div className="container">
           <button className="back-btn" onClick={onBack}>
-            ← {t('back')}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            {t('back')}
           </button>
 
           <div className="page-header">
@@ -328,7 +329,15 @@ export function CourseDetail({ course, t, lang, userId, onBack }: Props) {
             </div>
           ) : (
             <>
-              <div className="card-section" style={{ marginBottom: 20 }}>
+              <div className="section-card" style={{ marginBottom: 20 }}>
+                <div className="section-card-header">
+                  <span className="section-card-title">
+                    {lang === 'fr' ? 'Évaluations' : 'Evaluations'}
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text3)' }}>
+                    {components.length} · {totalWeight.toFixed(0)}%
+                  </span>
+                </div>
                 {components.map(comp => (
                   <ComponentRow
                     key={comp.id}

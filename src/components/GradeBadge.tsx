@@ -8,34 +8,19 @@ interface Props {
   letter?: string | null;
 }
 
-const COLOR_MAP: Record<string, { bg: string; color: string }> = {
-  'A+': { bg: '#dcfce7', color: '#15803d' },
-  'A':  { bg: '#dcfce7', color: '#15803d' },
-  'A-': { bg: '#dcfce7', color: '#15803d' },
-  'B+': { bg: '#dbeafe', color: '#1d4ed8' },
-  'B':  { bg: '#dbeafe', color: '#1d4ed8' },
-  'B-': { bg: '#dbeafe', color: '#1d4ed8' },
-  'C+': { bg: '#fef9c3', color: '#a16207' },
-  'C':  { bg: '#fef9c3', color: '#a16207' },
-  'C-': { bg: '#fef9c3', color: '#a16207' },
-  'D+': { bg: '#ffedd5', color: '#c2410c' },
-  'D':  { bg: '#ffedd5', color: '#c2410c' },
-  'E':  { bg: '#fee2e2', color: '#dc2626' },
-};
-
-function colorForLetter(letter: string) {
-  if (letter.startsWith('A')) return { bg: '#dcfce7', color: '#15803d' };
-  if (letter.startsWith('B')) return { bg: '#dbeafe', color: '#1d4ed8' };
-  if (letter.startsWith('C')) return { bg: '#fef9c3', color: '#a16207' };
-  if (letter.startsWith('D')) return { bg: '#ffedd5', color: '#c2410c' };
-  return { bg: '#fee2e2', color: '#dc2626' };
+function gradeColors(letter: string): { bg: string; fg: string } {
+  const l = letter[0];
+  if (l === 'A') return { bg: 'var(--success-sub)', fg: 'var(--success)' };
+  if (l === 'B') return { bg: 'var(--accent-sub)',  fg: 'var(--accent)'  };
+  if (l === 'C') return { bg: 'var(--warning-sub)', fg: 'var(--warning)' };
+  return               { bg: 'var(--danger-sub)',  fg: 'var(--danger)'  };
 }
 
 export function GradeBadge({ score, pending = '—', customScale, letter: letterOverride }: Props) {
   if (letterOverride) {
-    const colors = COLOR_MAP[letterOverride] ?? colorForLetter(letterOverride);
+    const { bg, fg } = gradeColors(letterOverride);
     return (
-      <span className="grade-badge" style={{ background: colors.bg, color: colors.color }}>
+      <span className="grade-badge" style={{ background: bg, color: fg }}>
         {letterOverride}
       </span>
     );
@@ -43,19 +28,19 @@ export function GradeBadge({ score, pending = '—', customScale, letter: letter
 
   if (score === null) {
     return (
-      <span className="grade-badge" style={{ background: 'var(--surface2)', color: 'var(--text3)' }}>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text3)' }}>
         {pending}
       </span>
     );
   }
 
   const grade = getGrade(score, customScale);
-  const colors = COLOR_MAP[grade.letter] ?? colorForLetter(grade.letter);
+  const { bg, fg } = gradeColors(grade.letter);
 
   return (
     <span
       className="grade-badge"
-      style={{ background: colors.bg, color: colors.color }}
+      style={{ background: bg, color: fg }}
       title={`${score.toFixed(1)}% → ${grade.letter} (${grade.gpa.toFixed(1)})`}
     >
       {grade.letter}

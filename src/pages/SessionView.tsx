@@ -143,10 +143,11 @@ export function SessionView({ session, t, userId, onBack, onSelectCourse }: Prop
 
   return (
     <>
-      <div className="page">
+      <div className="page page-enter">
         <div className="container">
           <button className="back-btn" onClick={onBack}>
-            ← {t('back')}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            {t('back')}
           </button>
 
           <div className="page-header">
@@ -159,18 +160,21 @@ export function SessionView({ session, t, userId, onBack, onSelectCourse }: Prop
           </div>
 
           <div className="stats-strip">
-            <div className="stat-card">
+            <div className={`stat-card${sessionGpa !== null ? ' highlight' : ''}`}>
+              <div className="top-line" />
               <div className="stat-label">{t('sessionGpa')}</div>
               <div className="stat-value">{formatGpa(sessionGpa)}</div>
               <div className="stat-sub">{sessionCredits} {t('credits_suffix')}</div>
             </div>
-            <div className="stat-card">
+            <div className={`stat-card${cumulativeGpa !== null ? ' highlight' : ''}`}>
+              <div className="top-line" />
               <div className="stat-label">{t('cumulativeGpa')}</div>
               <div className="stat-value">{formatGpa(cumulativeGpa)}</div>
               <div className="stat-sub">{sessionCredits} {t('credits_suffix')}</div>
             </div>
             {session.prior_gpa !== null && (
-              <div className="stat-card">
+              <div className="stat-card highlight">
+                <div className="top-line" />
                 <div className="stat-label">GPA ant.</div>
                 <div className="stat-value">{session.prior_gpa.toFixed(2)}</div>
                 <div className="stat-sub">{session.prior_credits ?? 0} {t('credits_suffix')}</div>

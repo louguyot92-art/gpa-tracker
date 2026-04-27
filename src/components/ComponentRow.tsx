@@ -2,28 +2,21 @@ import { useState, useRef, useEffect } from 'react';
 import type { Component, GradeEntry } from '../types';
 import type { StringKey } from '../lib/i18n';
 import { GRADE_SCALE } from '../lib/grades';
+import { GradeBadge } from './GradeBadge';
 
-const COLOR_MAP: Record<string, { bg: string; color: string }> = {
-  'A+': { bg: '#dcfce7', color: '#15803d' },
-  'A':  { bg: '#dcfce7', color: '#15803d' },
-  'A-': { bg: '#dcfce7', color: '#15803d' },
-  'B+': { bg: '#dbeafe', color: '#1d4ed8' },
-  'B':  { bg: '#dbeafe', color: '#1d4ed8' },
-  'B-': { bg: '#dbeafe', color: '#1d4ed8' },
-  'C+': { bg: '#fef9c3', color: '#a16207' },
-  'C':  { bg: '#fef9c3', color: '#a16207' },
-  'C-': { bg: '#fef9c3', color: '#a16207' },
-  'D+': { bg: '#ffedd5', color: '#c2410c' },
-  'D':  { bg: '#ffedd5', color: '#c2410c' },
-  'E':  { bg: '#fee2e2', color: '#dc2626' },
-};
+function gradeColors(letter: string): { bg: string; fg: string } {
+  const l = letter[0];
+  if (l === 'A') return { bg: 'var(--success-sub)', fg: 'var(--success)' };
+  if (l === 'B') return { bg: 'var(--accent-sub)',  fg: 'var(--accent)'  };
+  if (l === 'C') return { bg: 'var(--warning-sub)', fg: 'var(--warning)' };
+  return               { bg: 'var(--danger-sub)',  fg: 'var(--danger)'  };
+}
 
-function colorForLetter(letter: string) {
-  if (letter.startsWith('A')) return { bg: '#dcfce7', color: '#15803d' };
-  if (letter.startsWith('B')) return { bg: '#dbeafe', color: '#1d4ed8' };
-  if (letter.startsWith('C')) return { bg: '#fef9c3', color: '#a16207' };
-  if (letter.startsWith('D')) return { bg: '#ffedd5', color: '#c2410c' };
-  return { bg: '#fee2e2', color: '#dc2626' };
+function IcoEdit() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+}
+function IcoTrash() {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>;
 }
 
 interface Props {
@@ -45,16 +38,6 @@ export function ComponentRow({ component, gradeScale, t, onEdit, onDelete, onLet
     ? (component.score / component.max_score) * 100
     : null;
 
-  const barColor = pct === null ? 'var(--border)'
-    : pct >= 86 ? 'var(--success)'
-    : pct >= 70 ? 'var(--accent)'
-    : pct >= 60 ? 'var(--warning)'
-    : 'var(--danger)';
-
-  const letterColors = isLetter
-    ? (COLOR_MAP[component.letter_grade!] ?? colorForLetter(component.letter_grade!))
-    : null;
-
   const scale = gradeScale && gradeScale.length > 0
     ? [...gradeScale].sort((a, b) => b.min - a.min)
     : GRADE_SCALE;
@@ -71,108 +54,79 @@ export function ComponentRow({ component, gradeScale, t, onEdit, onDelete, onLet
   }, [pickerOpen]);
 
   return (
-    <div className="comp-row" style={{
-      padding: '14px 20px',
-      borderBottom: '1px solid var(--border)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <div style={{ fontWeight: 500, fontSize: 15 }}>{component.name}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          {isLetter ? (
-            <div style={{ position: 'relative' }} ref={pickerRef}>
-              <button
-                className="grade-badge"
-                style={{
-                  background: letterColors!.bg,
-                  color: letterColors!.color,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                }}
-                onClick={() => setPickerOpen(v => !v)}
-                title="Changer la lettre"
-              >
-                {component.letter_grade}
-              </button>
-              {pickerOpen && (
-                <div style={{
-                  position: 'absolute',
-                  right: 0,
-                  top: 'calc(100% + 6px)',
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 10,
-                  padding: '10px',
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 6,
-                  width: 200,
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                  zIndex: 50,
-                }}>
-                  {scale.map(entry => {
-                    const c = COLOR_MAP[entry.letter] ?? colorForLetter(entry.letter);
-                    const isSelected = entry.letter === component.letter_grade;
-                    return (
-                      <button
-                        key={entry.letter}
-                        style={{
-                          background: isSelected ? c.color : c.bg,
-                          color: isSelected ? 'white' : c.color,
-                          border: isSelected ? `2px solid ${c.color}` : '2px solid transparent',
-                          borderRadius: 6,
-                          padding: '4px 8px',
-                          fontFamily: 'DM Mono, monospace',
-                          fontWeight: 600,
-                          fontSize: 13,
-                          cursor: 'pointer',
-                          minWidth: 36,
-                          textAlign: 'center',
-                        }}
-                        onClick={() => {
-                          onLetterChange(entry.letter);
-                          setPickerOpen(false);
-                        }}
-                      >
-                        {entry.letter}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ) : component.score !== null ? (
-            <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 14, color: 'var(--text)' }}>
-              {component.score} / {component.max_score}
-            </span>
-          ) : (
-            <span style={{ fontSize: 13, color: 'var(--text3)' }}>{t('pending')}</span>
-          )}
-          <div className="inline-actions">
-            <button className="btn btn-ghost btn-sm" onClick={onEdit} title={t('edit')}>✎</button>
-            <button className="btn btn-ghost btn-sm" onClick={onDelete} title={t('delete')} style={{ color: 'var(--danger)' }}>✕</button>
-          </div>
-        </div>
+    <div className="comp-row">
+      {/* Name */}
+      <div>
+        <div className="comp-name">{component.name}</div>
+        {component.group_avg !== null && (
+          <div className="comp-sub">Moy. groupe : {component.group_avg}/{component.max_score}</div>
+        )}
       </div>
 
-      {!isLetter && (
-        <div style={{ marginTop: 10 }}>
-          <div className="progress-bar-wrap" style={{ height: 4 }}>
-            <div
-              className="progress-bar-fill"
-              style={{ width: pct !== null ? `${pct}%` : '0%', background: barColor }}
-            />
-          </div>
-        </div>
-      )}
+      {/* Weight */}
+      <div className="comp-weight">{component.weight}%</div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: isLetter ? 4 : 5 }}>
-        <span style={{ fontSize: 12, color: 'var(--text3)' }}>{component.weight}% du cours</span>
-        {!isLetter && pct !== null && (
-          <span style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'DM Mono, monospace' }}>
-            {Math.round(pct)}%
+      {/* Score */}
+      <div className="comp-score" style={{ color: pct !== null ? undefined : 'var(--text3)' }}>
+        {!isLetter && component.score !== null
+          ? `${component.score}/${component.max_score}`
+          : isLetter ? '' : '—'}
+      </div>
+
+      {/* Grade */}
+      <div className="comp-grade">
+        {isLetter ? (
+          <div style={{ position: 'relative' }} ref={pickerRef}>
+            <button
+              className="grade-badge"
+              style={{
+                ...gradeColors(component.letter_grade!),
+                border: 'none', cursor: 'pointer', fontWeight: 600,
+              }}
+              onClick={() => setPickerOpen(v => !v)}
+            >
+              {component.letter_grade}
+            </button>
+            {pickerOpen && (
+              <div style={{
+                position: 'absolute', right: 0, top: 'calc(100% + 6px)',
+                background: 'var(--surface)', border: '1px solid var(--border)',
+                borderRadius: 10, padding: 10,
+                display: 'flex', flexWrap: 'wrap', gap: 5, width: 200,
+                boxShadow: 'var(--sh-lg)', zIndex: 50,
+              }}>
+                {scale.map(entry => {
+                  const c = gradeColors(entry.letter);
+                  const isSelected = entry.letter === component.letter_grade;
+                  return (
+                    <button key={entry.letter} style={{
+                      background: isSelected ? c.fg : c.bg,
+                      color: isSelected ? 'white' : c.fg,
+                      border: `2px solid ${isSelected ? c.fg : 'transparent'}`,
+                      borderRadius: 6, padding: '3px 7px',
+                      fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 12,
+                      cursor: 'pointer', minWidth: 34, textAlign: 'center',
+                    }} onClick={() => { onLetterChange(entry.letter); setPickerOpen(false); }}>
+                      {entry.letter}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : pct !== null ? (
+          <GradeBadge score={pct} />
+        ) : (
+          <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>
+            {t('pending').toLowerCase()}
           </span>
         )}
+      </div>
+
+      {/* Actions */}
+      <div className="comp-actions inline-actions">
+        <button className="btn btn-ghost btn-icon btn-sm" onClick={onEdit} title={t('edit')}><IcoEdit /></button>
+        <button className="btn btn-ghost btn-icon btn-sm" onClick={onDelete} title={t('delete')} style={{ color: 'var(--danger)' }}><IcoTrash /></button>
       </div>
     </div>
   );
