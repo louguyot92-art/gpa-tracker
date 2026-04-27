@@ -6,8 +6,6 @@ import { Modal } from '../components/Modal';
 import {
   computeSessionGpa,
   computeCumulativeGpa,
-  computeCourseScore,
-  getGrade,
 } from '../lib/grades';
 import type { StringKey } from '../lib/i18n';
 
@@ -164,9 +162,7 @@ export function SessionView({ session, t, userId, onBack, onSelectCourse }: Prop
             <div className="stat-card">
               <div className="stat-label">{t('sessionGpa')}</div>
               <div className="stat-value">{formatGpa(sessionGpa)}</div>
-              {sessionGpa !== null && (
-                <div className="stat-sub">{getGrade(sessionGpa * 100 / 4.3).letter}</div>
-              )}
+              <div className="stat-sub">{sessionCredits} {t('credits_suffix')}</div>
             </div>
             <div className="stat-card">
               <div className="stat-label">{t('cumulativeGpa')}</div>

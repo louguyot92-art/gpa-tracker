@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function Simulator({ course, components, t }: Props) {
-  const pending = components.filter(c => c.score === null);
+  const pending = components.filter(c => c.score === null && !c.letter_grade);
 
   const [overrides, setOverrides] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {};

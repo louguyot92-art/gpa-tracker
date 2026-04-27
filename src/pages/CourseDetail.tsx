@@ -6,7 +6,7 @@ import { Simulator } from '../components/Simulator';
 import { GradeBadge } from '../components/GradeBadge';
 import { GradeScaleEditor } from '../components/GradeScaleEditor';
 import { Modal } from '../components/Modal';
-import { computeCourseScore, getGrade } from '../lib/grades';
+import { computeCourseScore, getGrade, GRADE_SCALE } from '../lib/grades';
 import type { StringKey } from '../lib/i18n';
 
 interface Props {
@@ -23,9 +23,11 @@ interface CompForm {
   max_score: string;
   score: string;
   group_avg: string;
+  inputMode: 'numeric' | 'letter';
+  letter_grade: string;
 }
 
-const EMPTY_FORM: CompForm = { name: '', weight: '', max_score: '100', score: '', group_avg: '' };
+const EMPTY_FORM: CompForm = { name: '', weight: '', max_score: '100', score: '', group_avg: '', inputMode: 'numeric', letter_grade: '' };
 
 export function CourseDetail({ course, t, lang, userId, onBack }: Props) {
   const [courseData, setCourseData] = useState<Course>(course);
@@ -38,6 +40,19 @@ export function CourseDetail({ course, t, lang, userId, onBack }: Props) {
   const [showScaleEditor, setShowScaleEditor] = useState(false);
   const [pendingScale, setPendingScale] = useState<GradeEntry[] | null>(course.grade_scale);
   const [savingScale, setSavingScale] = useState(false);
+  const [overridePickerOpen, setOverridePickerOpen] = useState(false);
+  const overridePickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!overridePickerOpen) return;
+    function onClickOutside(e: MouseEvent) {
+      if (overridePickerRef.current && !overridePickerRef.current.contains(e.target as Node)) {
+        setOverridePickerOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [overridePickerOpen]);
 
   useEffect(() => {
     loadComponents();
@@ -77,6 +92,8 @@ export function CourseDetail({ course, t, lang, userId, onBack }: Props) {
       max_score: comp.max_score.toString(),
       score: comp.score?.toString() ?? '',
       group_avg: comp.group_avg?.toString() ?? '',
+      inputMode: comp.letter_grade ? 'letter' : 'numeric',
+      letter_grade: comp.letter_grade ?? '',
     });
     setShowModal(true);
   }
@@ -87,6 +104,27 @@ export function CourseDetail({ course, t, lang, userId, onBack }: Props) {
     setComponents(prev => prev.filter(c => c.id !== comp.id));
   }
 
+  async function handleGradeOverride(letter: string | null) {
+    const { data } = await supabase
+      .from('courses')
+      .update({ grade_override: letter })
+      .eq('id', courseData.id)
+      .select()
+      .single();
+    if (data) setCourseData(data);
+    setOverridePickerOpen(false);
+  }
+
+  async function handleLetterChange(comp: Component, letter: string) {
+    const { data } = await supabase
+      .from('components')
+      .update({ letter_grade: letter })
+      .eq('id', comp.id)
+      .select()
+      .single();
+    if (data) setComponents(prev => prev.map(c => c.id === comp.id ? data : c));
+  }
+
   async function handleSave() {
     if (!form.name.trim() || !form.weight) return;
     setSaving(true);
@@ -94,9 +132,10 @@ export function CourseDetail({ course, t, lang, userId, onBack }: Props) {
     const payload = {
       name: form.name.trim(),
       weight: parseFloat(form.weight),
-      max_score: parseFloat(form.max_score) || 100,
-      score: form.score !== '' ? parseFloat(form.score) : null,
-      group_avg: form.group_avg !== '' ? parseFloat(form.group_avg) : null,
+      max_score: form.inputMode === 'letter' ? 100 : (parseFloat(form.max_score) || 100),
+      score: form.inputMode === 'letter' ? null : (form.score !== '' ? parseFloat(form.score) : null),
+      group_avg: form.inputMode === 'letter' ? null : (form.group_avg !== '' ? parseFloat(form.group_avg) : null),
+      letter_grade: form.inputMode === 'letter' ? (form.letter_grade || null) : null,
       course_id: course.id,
       user_id: userId,
     };
@@ -141,7 +180,6 @@ export function CourseDetail({ course, t, lang, userId, onBack }: Props) {
 
   const weightOk = Math.abs(totalWeight - 100) < 0.01;
   const weightOver = totalWeight > 100;
-  const hasCustomScale = courseData.grade_scale && courseData.grade_scale.length > 0;
 
   return (
     <>
@@ -159,14 +197,93 @@ export function CourseDetail({ course, t, lang, userId, onBack }: Props) {
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {score !== null && (
-                <div style={{ textAlign: 'right' }}>
-                  <GradeBadge score={score} customScale={courseData.grade_scale} />
-                  <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--text2)', marginTop: 2 }}>
-                    {score.toFixed(1)}% · {grade?.gpa.toFixed(2)}
+              {(score !== null || courseData.grade_override) && (() => {
+                const scale = courseData.grade_scale && courseData.grade_scale.length > 0
+                  ? [...courseData.grade_scale].sort((a, b) => b.min - a.min)
+                  : GRADE_SCALE;
+                const displayLetter = courseData.grade_override ?? grade?.letter ?? null;
+                const displayGpa = scale.find(e => e.letter === displayLetter)?.gpa ?? grade?.gpa ?? null;
+                return (
+                  <div style={{ textAlign: 'right', position: 'relative' }} ref={overridePickerRef}>
+                    <button
+                      className="grade-badge"
+                      style={{
+                        border: courseData.grade_override ? '2px dashed currentColor' : 'none',
+                        cursor: 'pointer',
+                        background: 'none',
+                        padding: courseData.grade_override ? '2px 8px' : undefined,
+                      }}
+                      onClick={() => setOverridePickerOpen(v => !v)}
+                      title={lang === 'fr' ? 'Modifier la lettre finale' : 'Override final grade'}
+                    >
+                      <GradeBadge score={courseData.grade_override ? null : score} pending={displayLetter ?? '—'} customScale={courseData.grade_scale} />
+                    </button>
+                    <div style={{ fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--text2)', marginTop: 2 }}>
+                      {score !== null && `${score.toFixed(1)}% · `}{displayGpa?.toFixed(2)}
+                    </div>
+                    {overridePickerOpen && (
+                      <div style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: 'calc(100% + 6px)',
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 10,
+                        padding: 10,
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 6,
+                        width: 210,
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                        zIndex: 50,
+                      }}>
+                        {scale.map(entry => {
+                          const isSelected = entry.letter === (courseData.grade_override ?? grade?.letter);
+                          return (
+                            <button
+                              key={entry.letter}
+                              style={{
+                                background: isSelected ? 'var(--accent)' : 'var(--surface2)',
+                                color: isSelected ? 'white' : 'var(--text)',
+                                border: isSelected ? '2px solid var(--accent)' : '2px solid transparent',
+                                borderRadius: 6,
+                                padding: '4px 8px',
+                                fontFamily: 'DM Mono, monospace',
+                                fontWeight: 600,
+                                fontSize: 13,
+                                cursor: 'pointer',
+                                minWidth: 36,
+                                textAlign: 'center',
+                              }}
+                              onClick={() => handleGradeOverride(entry.letter)}
+                            >
+                              {entry.letter}
+                            </button>
+                          );
+                        })}
+                        {courseData.grade_override && (
+                          <button
+                            style={{
+                              width: '100%',
+                              marginTop: 4,
+                              padding: '5px',
+                              background: 'none',
+                              border: '1px solid var(--border)',
+                              borderRadius: 6,
+                              color: 'var(--text3)',
+                              fontSize: 12,
+                              cursor: 'pointer',
+                            }}
+                            onClick={() => handleGradeOverride(null)}
+                          >
+                            {lang === 'fr' ? 'Réinitialiser (calcul auto)' : 'Reset (auto)'}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
               <button
                 className="btn btn-secondary btn-sm"
                 onClick={() => { setPendingScale(courseData.grade_scale); setShowScaleEditor(true); }}
@@ -216,9 +333,11 @@ export function CourseDetail({ course, t, lang, userId, onBack }: Props) {
                   <ComponentRow
                     key={comp.id}
                     component={comp}
+                    gradeScale={courseData.grade_scale}
                     t={t}
                     onEdit={() => openEdit(comp)}
                     onDelete={() => handleDelete(comp)}
+                    onLetterChange={letter => handleLetterChange(comp, letter)}
                     showGroupAvg={courseData.grading_mode === 'curved'}
                   />
                 ))}
@@ -301,7 +420,32 @@ export function CourseDetail({ course, t, lang, userId, onBack }: Props) {
               ))}
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {/* Input mode toggle */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+            {(['numeric', 'letter'] as const).map(mode => (
+              <button
+                key={mode}
+                type="button"
+                className="btn btn-sm"
+                style={{
+                  background: form.inputMode === mode ? 'var(--accent)' : 'var(--surface2)',
+                  color: form.inputMode === mode ? 'white' : 'var(--text2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 6,
+                  padding: '4px 12px',
+                  fontSize: 13,
+                  fontWeight: 500,
+                }}
+                onClick={() => setForm(f => ({ ...f, inputMode: mode }))}
+              >
+                {mode === 'numeric'
+                  ? (lang === 'fr' ? 'Note numérique' : 'Numeric score')
+                  : (lang === 'fr' ? 'Lettre' : 'Letter grade')}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: form.inputMode === 'numeric' ? '1fr 1fr' : '1fr', gap: 12 }}>
             <div className="field">
               <label>{t('weight')} (%)</label>
               <input
@@ -328,49 +472,80 @@ export function CourseDetail({ course, t, lang, userId, onBack }: Props) {
                 ))}
               </div>
             </div>
-            <div className="field">
-              <label>{t('maxScore')}</label>
-              <input
-                className="input"
-                type="number"
-                min="1"
-                step="1"
-                value={form.max_score}
-                onChange={e => setForm(f => ({ ...f, max_score: e.target.value }))}
-                placeholder="ex: 100"
-              />
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div className="field">
-              <label>{t('score')} (sur {form.max_score || '?'})</label>
-              <input
-                className="input"
-                type="number"
-                min="0"
-                max={form.max_score || undefined}
-                step="0.5"
-                value={form.score}
-                onChange={e => setForm(f => ({ ...f, score: e.target.value }))}
-                placeholder={t('pending')}
-              />
-            </div>
-            {courseData.grading_mode === 'curved' && (
+            {form.inputMode === 'numeric' && (
               <div className="field">
-                <label>{t('groupAvg')}</label>
+                <label>{t('maxScore')}</label>
+                <input
+                  className="input"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={form.max_score}
+                  onChange={e => setForm(f => ({ ...f, max_score: e.target.value }))}
+                  placeholder="ex: 100"
+                />
+              </div>
+            )}
+          </div>
+          {form.inputMode === 'numeric' ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="field">
+                <label>{t('score')} (sur {form.max_score || '?'})</label>
                 <input
                   className="input"
                   type="number"
                   min="0"
                   max={form.max_score || undefined}
                   step="0.5"
-                  value={form.group_avg}
-                  onChange={e => setForm(f => ({ ...f, group_avg: e.target.value }))}
-                  placeholder="—"
+                  value={form.score}
+                  onChange={e => setForm(f => ({ ...f, score: e.target.value }))}
+                  placeholder={t('pending')}
                 />
               </div>
-            )}
-          </div>
+              {courseData.grading_mode === 'curved' && (
+                <div className="field">
+                  <label>{t('groupAvg')}</label>
+                  <input
+                    className="input"
+                    type="number"
+                    min="0"
+                    max={form.max_score || undefined}
+                    step="0.5"
+                    value={form.group_avg}
+                    onChange={e => setForm(f => ({ ...f, group_avg: e.target.value }))}
+                    placeholder="—"
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="field">
+              <label>{lang === 'fr' ? 'Lettre obtenue' : 'Grade received'}</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
+                {(courseData.grade_scale && courseData.grade_scale.length > 0
+                  ? [...courseData.grade_scale].sort((a, b) => b.min - a.min)
+                  : GRADE_SCALE
+                ).map(entry => (
+                  <button
+                    key={entry.letter}
+                    type="button"
+                    className="tag"
+                    style={{
+                      cursor: 'pointer',
+                      background: form.letter_grade === entry.letter ? 'var(--accent)' : undefined,
+                      color: form.letter_grade === entry.letter ? 'white' : undefined,
+                      fontFamily: 'DM Mono, monospace',
+                      minWidth: 38,
+                      textAlign: 'center',
+                    }}
+                    onClick={() => setForm(f => ({ ...f, letter_grade: entry.letter }))}
+                  >
+                    {entry.letter}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </Modal>
       )}
     </>

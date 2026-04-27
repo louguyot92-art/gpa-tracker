@@ -15,6 +15,7 @@ export interface Course {
   credits: number;
   grading_mode: 'absolute' | 'curved';
   grade_scale: GradeEntry[] | null;
+  grade_override: string | null;
   created_at: string;
 }
 
@@ -26,6 +27,7 @@ export interface Component {
   weight: number;
   max_score: number;
   score: number | null;
+  letter_grade: string | null;
   group_avg: number | null;
   created_at: string;
 }

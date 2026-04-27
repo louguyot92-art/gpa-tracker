@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { useLang } from './lib/i18n';
+import { useTheme } from './lib/theme';
 import type { Session, Course } from './types';
 import { Auth } from './pages/Auth';
 import { Dashboard } from './pages/Dashboard';
@@ -18,6 +19,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [view, setView] = useState<View>({ page: 'dashboard' });
   const { lang, setLang, t } = useLang();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -61,6 +63,14 @@ export default function App() {
             GPA <span>Tracker</span>
           </button>
           <div className="nav-actions">
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={toggleTheme}
+              title={theme === 'light' ? 'Mode sombre' : 'Mode clair'}
+              style={{ fontSize: 16, padding: '6px 10px' }}
+            >
+              {theme === 'light' ? '☾' : '☀'}
+            </button>
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}

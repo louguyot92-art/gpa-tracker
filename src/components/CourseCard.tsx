@@ -1,5 +1,5 @@
 import type { Course, Component } from '../types';
-import { computeCourseScore, getGrade } from '../lib/grades';
+import { computeCourseScore } from '../lib/grades';
 import { GradeBadge } from './GradeBadge';
 import type { StringKey } from '../lib/i18n';
 
@@ -27,7 +27,7 @@ export function CourseCard({ course, components, t, onClick, onEdit, onDelete }:
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div className="course-card-name">{course.name}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <GradeBadge score={score} pending={t('pending')} customScale={course.grade_scale} />
+            <GradeBadge score={course.grade_override ? null : score} letter={course.grade_override} pending={t('pending')} customScale={course.grade_scale} />
             <div className="inline-actions" onClick={e => e.stopPropagation()}>
               <button className="btn btn-ghost btn-sm" onClick={onEdit} title={t('edit')}>✎</button>
               <button className="btn btn-ghost btn-sm" onClick={onDelete} title={t('delete')} style={{ color: 'var(--danger)' }}>✕</button>

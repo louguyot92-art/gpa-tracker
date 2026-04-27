@@ -20,6 +20,26 @@
   font-family: 'DM Sans', system-ui, sans-serif;
 }
 
+[data-theme="dark"] {
+  --bg: #111110;
+  --surface: #1c1c1a;
+  --surface2: #252523;
+  --border: #2e2e2b;
+  --text: #edede9;
+  --text2: #9b9b95;
+  --text3: #5a5a56;
+  --accent: #3b82f6;
+  --accent-light: #1e2a3a;
+  --danger: #f87171;
+  --danger-light: #2a1a1a;
+  --success: #4ade80;
+  --success-light: #142a1a;
+  --warning: #fbbf24;
+  --warning-light: #2a2010;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -1px rgba(0,0,0,0.2);
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -631,7 +651,8 @@ input, select, textarea {
   transition: opacity 0.15s;
 }
 tr:hover .inline-actions,
-.course-card:hover .inline-actions {
+.course-card:hover .inline-actions,
+.comp-row:hover .inline-actions {
   opacity: 1;
 }
 

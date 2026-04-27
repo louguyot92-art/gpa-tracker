@@ -36,6 +36,22 @@ export function computeCourseScore(
   let weightUsed = 0;
 
   for (const comp of components) {
+    // Letter-graded component: convert letter to representative %
+    if (comp.letter_grade && simOverrides[comp.id] === undefined) {
+      const scale = course.grade_scale && course.grade_scale.length > 0
+        ? [...course.grade_scale].sort((a, b) => b.min - a.min)
+        : GRADE_SCALE;
+      const match = scale.find(e => e.letter === comp.letter_grade);
+      if (!match) continue;
+      // Use midpoint between this grade's min and next grade's min
+      const idx = scale.indexOf(match);
+      const nextMin = idx > 0 ? scale[idx - 1].min : 100;
+      const pct = (match.min + nextMin) / 2;
+      weightedSum += pct * (comp.weight / 100);
+      weightUsed += comp.weight / 100;
+      continue;
+    }
+
     const rawScore = simOverrides[comp.id] !== undefined
       ? simOverrides[comp.id]
       : comp.score;
@@ -84,10 +100,21 @@ export function computeSessionGpa(
   let totalCredits = 0;
 
   for (const course of courses) {
-    const comps = componentsByCourse[course.id] ?? [];
-    const score = computeCourseScore(course, comps);
-    if (score === null) continue;
-    const grade = getGrade(score, course.grade_scale);
+    let grade: GradeEntry | null = null;
+
+    if (course.grade_override) {
+      const scale = course.grade_scale && course.grade_scale.length > 0
+        ? [...course.grade_scale].sort((a, b) => b.min - a.min)
+        : GRADE_SCALE;
+      grade = scale.find(e => e.letter === course.grade_override) ?? null;
+    } else {
+      const comps = componentsByCourse[course.id] ?? [];
+      const score = computeCourseScore(course, comps);
+      if (score === null) continue;
+      grade = getGrade(score, course.grade_scale);
+    }
+
+    if (!grade) continue;
     totalPoints += grade.gpa * course.credits;
     totalCredits += course.credits;
   }

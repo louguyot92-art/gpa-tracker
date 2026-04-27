@@ -5,6 +5,7 @@ interface Props {
   score: number | null;
   pending?: string;
   customScale?: GradeEntry[] | null;
+  letter?: string | null;
 }
 
 const COLOR_MAP: Record<string, { bg: string; color: string }> = {
@@ -30,7 +31,16 @@ function colorForLetter(letter: string) {
   return { bg: '#fee2e2', color: '#dc2626' };
 }
 
-export function GradeBadge({ score, pending = '—', customScale }: Props) {
+export function GradeBadge({ score, pending = '—', customScale, letter: letterOverride }: Props) {
+  if (letterOverride) {
+    const colors = COLOR_MAP[letterOverride] ?? colorForLetter(letterOverride);
+    return (
+      <span className="grade-badge" style={{ background: colors.bg, color: colors.color }}>
+        {letterOverride}
+      </span>
+    );
+  }
+
   if (score === null) {
     return (
       <span className="grade-badge" style={{ background: 'var(--surface2)', color: 'var(--text3)' }}>
